@@ -1,0 +1,35 @@
+Device: NVIDIA H200
+Total VRAM: 139.8 GB
+
+V4-Flash-realistic dims: H=64, dim=512, tail_dim=64, topk=512
+  TileLang: D_qk = dim + tail_dim = 576 (split MLA layout)
+  Ours:     D    = 512            (single-D, pow2-required by Triton kernel)
+  TFLOPS reported per-side using each side's actual D (~11% FLOP-count delta)
+============================================================================================
+       S  TileLang time  TileLang HBM   TileLang TFLOPS |  ours time   ours HBM   ours TFLOPS
+--------------------------------------------------------------------------------------------
+2026-04-25 21:58:14  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:133): TileLang begins to compile kernel `main` with `out_idx=[-2, -1]`
+2026-04-25 21:58:26  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:141): TileLang completes to compile kernel `main`
+    4096          ERROR             -                 - |    INVALID_OUT             -             -
+          (TileLang ERROR: kernel main input q_start_index_s ndim expected 1, but got 0)
+          (ours INVALID_OUT: ours leading shape (1, 4096, 64) != expected (1, 4096, 64, 512))
+2026-04-25 21:58:29  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:133): TileLang begins to compile kernel `main` with `out_idx=[4, 5]`
+2026-04-25 21:58:40  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:141): TileLang completes to compile kernel `main`
+   16384          ERROR             -                 - |    INVALID_OUT             -             -
+          (TileLang ERROR: kernel main input q_start_index_s ndim expected 1, but got 0)
+          (ours INVALID_OUT: ours leading shape (1, 16384, 64) != expected (1, 16384, 64, 512))
+2026-04-25 21:58:41  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:133): TileLang begins to compile kernel `main` with `out_idx=[4, 5]`
+2026-04-25 21:58:51  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:141): TileLang completes to compile kernel `main`
+   65536          ERROR             -                 - |    INVALID_OUT             -             -
+          (TileLang ERROR: kernel main input q_start_index_s ndim expected 1, but got 0)
+          (ours INVALID_OUT: ours leading shape (1, 65536, 64) != expected (1, 65536, 64, 512))
+2026-04-25 21:58:57  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:133): TileLang begins to compile kernel `main` with `out_idx=[4, 5]`
+2026-04-25 21:59:08  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:141): TileLang completes to compile kernel `main`
+  131072          ERROR             -                 - |    INVALID_OUT             -             -
+          (TileLang ERROR: kernel main input q_start_index_s ndim expected 1, but got 0)
+          (ours INVALID_OUT: ours leading shape (1, 131072, 64) != expected (1, 131072, 64, 512))
+2026-04-25 21:59:10  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:133): TileLang begins to compile kernel `main` with `out_idx=[4, 5]`
+2026-04-25 21:59:20  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:141): TileLang completes to compile kernel `main`
+  262144          ERROR             -                 - |    INVALID_OUT             -             -
+          (TileLang ERROR: kernel main input q_start_index_s ndim expected 1, but got 0)
+          (ours INVALID_OUT: ours leading shape (1, 262144, 64) != expected (1, 262144, 64, 512))

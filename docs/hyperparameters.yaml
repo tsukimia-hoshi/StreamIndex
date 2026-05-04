@@ -1,0 +1,107 @@
+# DeepSeek-V4 hyperparameters used by FlashSparse.
+# Sourced 2026-04-25 from huggingface.co/deepseek-ai/DeepSeek-V4-Pro/config.json
+# and inference/{config.json,model.py}. Version pinned to release 2026-04-24.
+
+# === V4-Pro (production target) ===========================================
+v4_pro:
+ # Transformer backbone
+ hidden_size: 7168 # also written `dim`
+ num_hidden_layers: 61
+ vocab_size: 129280
+ max_position_embeddings: 1048576 # 1M context
+ torch_dtype: bfloat16
+ num_nextn_predict_layers: 1 # MTP head, 1 layer (compress_ratio=0)
+ num_hash_layers: 3 # first 3 layers use hash routing in MoE
+
+ # Attention (MLA + MQA pattern)
+ num_attention_heads: 128 # n_h
+ num_key_value_heads: 1 # MQA — single shared KV head
+ head_dim: 512 # c, the MLA latent head dim
+ qk_rope_head_dim: 64 # RoPE part; non-rope part is head_dim - 64 = 448
+ q_lora_rank: 1536 # d_c, query latent compression rank
+ o_lora_rank: 1024 # d_g, per-group output projection latent dim
+ o_groups: 16 # g, output projection groups
+ sliding_window: 128 # n_win
+ attention_bias: false
+
+ # RoPE / YaRN
+ rope_theta: 10000
+ compress_rope_theta: 160000 # RoPE base for the compressed branch
+ rope_scaling:
+ type: yarn
+ factor: 16
+ original_max_position_embeddings: 65536
+ beta_fast: 32
+ beta_slow: 1
+
+ # Lightning indexer (CSA top-k selection)
+ index_n_heads: 64 # n_I_h
+ index_head_dim: 128 # c_I
+ index_topk: 1024 # top_k
+ scoring_func: sqrtsoftplus # = F.softplus(x).sqrt — used by MoE gate
+
+ # Compression policy
+ csa_compress_ratio: 4 # m — overlapping windows
+ hca_compress_ratio: 128 # m_prime — non-overlapping
+ # Per-layer pattern (length 62 = 61 transformer layers + 1 MTP head):
+ # `0`=dense (MTP only), `4`=CSA, `128`=HCA. V4-Pro pattern: HCA, HCA, then alternating CSA(even)/HCA(odd) from layer 2 to 60.
+ csa_layer_indices: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60]
+ hca_layer_indices: [0, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59]
+ mtp_layer_indices: [61]
+
+ # Hyper-Connections (mHC)
+ hc_mult: 4 # n_hc
+ hc_sinkhorn_iters: 20
+ hc_eps: 1.0e-6
+
+ # MoE
+ n_routed_experts: 384
+ n_shared_experts: 1
+ num_experts_per_tok: 6
+ moe_intermediate_size: 3072
+ topk_method: noaux_tc
+ routed_scaling_factor: 2.5
+ norm_topk_prob: true
+ swiglu_limit: 10.0
+
+ # Quantization
+ weight_dtype: fp8 # main path: e4m3 weights, ue8m0 scale, block (128,128)
+ expert_dtype: fp4 # MoE expert weights: e2m1 with ue8m0 scale, block 32 along K
+ index_q_dtype: fp4 # indexer query is FP4-simulated (Hadamard-rotated first)
+ index_k_dtype: fp8 # indexer key (compressed) is FP8
+ rope_dim_dtype: bf16 # rope dims always stay in bf16 for positional precision
+ scale_fmt: ue8m0
+ block_size_fp8: 128
+ block_size_fp4: 32
+
+ rms_norm_eps: 1.0e-6
+
+
+# === V4-Flash (smaller variant) ===========================================
+v4_flash:
+ hidden_size: 4096
+ num_hidden_layers: 43
+ num_attention_heads: 64
+ q_lora_rank: 1024
+ o_groups: 8
+ index_topk: 512
+ n_routed_experts: 256
+ moe_intermediate_size: 2048
+ routed_scaling_factor: 1.5
+ # Per-layer pattern: dense, dense, then alternating CSA(even)/HCA(odd) for layers 2..42.
+ dense_layer_indices: [0, 1] # compress_ratio=0 (no sparse attention)
+ csa_layer_indices: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42]
+ hca_layer_indices: [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41]
+ mtp_layer_indices: [43]
+ # All other settings inherit from v4_pro (head_dim=512, qk_rope_head_dim=64, sliding_window=128, hc_mult=4, ...).
+
+
+# === Notes for kernel implementers ========================================
+
+notes:
+ d_v: 512 # value dim. q/k have d_qk = head_dim + qk_rope_head_dim = 576; v has d_v = head_dim = 512.
+ d_qk: 576 # full Q/K dim including RoPE
+ fp8_quant_block_kv: 64 # observed in model.py: act_quant(kv[..., :-rd], 64, ...) — kv non-rope quant is per-64
+ hadamard: "rotate_activation uses fast_hadamard_transform with scale = dim ** -0.5; required for FP4 paths to spread information"
+ sm_scale_fwd: "1 / sqrt(d_qk) = 1 / sqrt(576). Internally kernel multiplies by log2(e) for exp2 fast path."
+ attn_sink_semantic: "per-head learnable scalar; adds a phantom softmax entry with weight exp(sink - max), value 0. Keeps softmax normalized when all real entries are masked."

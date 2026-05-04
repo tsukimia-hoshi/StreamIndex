@@ -1,0 +1,15 @@
+Device: NVIDIA H200
+H200 BF16 dense peak (assumed): 989 TFLOPS
+
+=== FORWARD (sparse_attn_fwd) ===
+config                            time (ms)  peak (GB)    TFLOPS   % peak
+---------------------------------------------------------------------------
+V4-Flash (H=64 D=128 K=512)            0.24      0.063     291.9    29.5%
+V4-Flash-D (H=64 D=512 K=512)          4.53      0.251      60.7     6.1%
+V4-Pro K=1024 (H=128 D=512 K=1024)      13.96      0.502      78.7     8.0%
+
+=== BACKWARD (sparse_attn_bwd v1, atomic-scatter) ===
+config                            time (ms)  peak (GB)    TFLOPS   % peak
+---------------------------------------------------------------------------
+V4-Flash (H=64 D=128 K=512)            1.87      0.066     183.3    18.5%
+V4-Flash-D (H=64 D=512 K=512)        335.35      0.263       4.1     0.4%

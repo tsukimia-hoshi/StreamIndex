@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "streamindex"
+version = "0.1.0"
+description = "Memory-bounded compressed sparse attention via streaming top-k. Triton kernels for the DeepSeek-V4 lightning indexer."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Jaber Jaber",  email = "jaber@rightnowai.co"},
+    {name = "Osama Jaber",  email = "osama@rightnowai.co"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Environment :: GPU :: NVIDIA CUDA :: 12",
+    "Environment :: GPU :: NVIDIA CUDA :: 13",
+]
+keywords = [
+    "attention", "sparse-attention", "compressed-sparse-attention",
+    "deepseek", "v4", "lightning-indexer", "streaming-top-k",
+    "triton", "long-context", "transformer",
+]
+dependencies = [
+    "torch >= 2.10",
+    "triton >= 3.5",
+    "numpy >= 1.24",
+    "einops >= 0.8",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-xdist"]
+bench = ["matplotlib", "pandas"]
+dev = ["ruff", "pre-commit"]
+
+[project.urls]
+Homepage   = "https://github.com/RightNow-AI/StreamIndex"
+Repository = "https://github.com/RightNow-AI/StreamIndex"
+Issues     = "https://github.com/RightNow-AI/StreamIndex/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["flash_sparse*"]
+exclude = ["tests*", "benchmarks*", "docs*", "eval*"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"

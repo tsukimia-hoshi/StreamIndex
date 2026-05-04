@@ -1,0 +1,10 @@
+Device: NVIDIA H200
+V4-Flash dims: n_heads=64 head_dim=128 top_k=512 ratio=4 dim=4096
+Pass threshold: mean recall ≥ 1.0
+       S        T     mean      min     %=1   %<.99   verdict
+------------------------------------------------------------
+    2048      512   1.0000   1.0000 100.00%  0.000%      PASS
+    4096     1024   1.0000   1.0000 100.00%  0.000%      PASS
+    8192     2048   1.0000   1.0000 100.00%  0.000%      PASS
+
+OVERALL: PASS — chunked indexer is a drop-in replacement on V4-Flash dims.

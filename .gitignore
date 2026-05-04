@@ -1,0 +1,42 @@
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.so
+*.pyd
+__pycache__/
+*.py[cod]
+*.cubin
+*.ptx
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Generated kernel caches
+.deep_gemm/
+.tilelang/
+.triton/
+
+# Local scratch
+scratch/
+*.local.*
+
+# Bench output (raw logs are kept under benchmarks/results/<date>/)
+benchmarks/results/*
+!benchmarks/results/2026-*/
+!benchmarks/results/2026-*/**
+
+# OS
+.DS_Store
+Thumbs.db

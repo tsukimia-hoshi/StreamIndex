@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: "StreamIndex"
+message: "If you use this software, please cite the paper below."
+type: software
+authors:
+  - family-names: Jaber
+    given-names: Jaber
+    email: jaber@rightnowai.co
+    affiliation: RightNow AI
+  - family-names: Jaber
+    given-names: Osama
+    email: osama@rightnowai.co
+    affiliation: RightNow AI
+license: MIT
+repository-code: "https://github.com/RightNow-AI/StreamIndex"
+preferred-citation:
+  type: article
+  title: "StreamIndex: Memory-Bounded Compressed Sparse Attention via Streaming Top-k"
+  authors:
+    - family-names: Jaber
+      given-names: Jaber
+    - family-names: Jaber
+      given-names: Osama
+  year: 2026
+  notes: "arXiv preprint"

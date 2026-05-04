@@ -1,0 +1,23 @@
+Device: NVIDIA H200
+Total VRAM: 139.8 GB
+
+Pipeline-composition bench: TileLang attention + {materialize, chunked} indexer
+V4-Flash dims: H_q=64, dim=512, tail=64, H_I=64, D_I=128, m=4, top_k=512
+============================================================================================
+       S   mat (ms)    mat HBM  chunk (ms)   chunk HBM     mat status
+--------------------------------------------------------------------------------------------
+2026-04-25 22:44:20  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:133): TileLang begins to compile kernel `main` with `out_idx=[-2, -1]`
+2026-04-25 22:44:30  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:141): TileLang completes to compile kernel `main`
+    8192        6.5     0.58 GB         7.5     0.58 GB             ok
+2026-04-25 22:44:33  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:133): TileLang begins to compile kernel `main` with `out_idx=[4, 5]`
+2026-04-25 22:44:44  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:141): TileLang completes to compile kernel `main`
+   32768       42.6     2.32 GB        47.2     2.32 GB             ok
+2026-04-25 22:44:48  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:133): TileLang begins to compile kernel `main` with `out_idx=[4, 5]`
+2026-04-25 22:44:58  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:141): TileLang completes to compile kernel `main`
+   65536      132.9     4.64 GB       152.3     4.64 GB             ok
+2026-04-25 22:45:09  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:133): TileLang begins to compile kernel `main` with `out_idx=[4, 5]`
+2026-04-25 22:45:19  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:141): TileLang completes to compile kernel `main`
+  131072      460.4    17.00 GB       531.3     9.28 GB             ok
+2026-04-25 22:45:55  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:133): TileLang begins to compile kernel `main` with `out_idx=[4, 5]`
+2026-04-25 22:46:06  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:141): TileLang completes to compile kernel `main`
+  262144        OOM           -      1968.8    18.56 GB            OOM
