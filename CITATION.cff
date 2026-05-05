@@ -13,6 +13,10 @@ authors:
     affiliation: RightNow AI
 license: MIT
 repository-code: "https://github.com/RightNow-AI/StreamIndex"
+identifiers:
+  - type: other
+    value: "arXiv:2605.02568"
+    description: "arXiv preprint"
 preferred-citation:
   type: article
   title: "StreamIndex: Memory-Bounded Compressed Sparse Attention via Streaming Top-k"
@@ -22,4 +26,7 @@ preferred-citation:
     - family-names: Jaber
       given-names: Osama
   year: 2026
-  notes: "arXiv preprint"
+  url: "https://arxiv.org/abs/2605.02568"
+  identifiers:
+    - type: other
+      value: "arXiv:2605.02568"

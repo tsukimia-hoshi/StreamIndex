@@ -4,6 +4,7 @@
 > Triton implementation of the DeepSeek-V4 lightning indexer that runs at
 > sequence lengths where the reference materialize-then-topk path OOMs.
 
+[![arXiv](https://img.shields.io/badge/arXiv-2605.02568-b31b1b.svg)](https://arxiv.org/abs/2605.02568)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python ≥ 3.11](https://img.shields.io/badge/python-≥3.11-blue.svg)](https://www.python.org/)
 [![Triton ≥ 3.5](https://img.shields.io/badge/triton-≥3.5-orange.svg)](https://github.com/triton-lang/triton)
@@ -159,10 +160,13 @@ This is a kernel and a Python driver, not an end-to-end system.
 
 ```bibtex
 @article{jaber2026streamindex,
-  title  = {{StreamIndex}: Memory-Bounded Compressed Sparse Attention via Streaming Top-k},
-  author = {Jaber, Jaber and Jaber, Osama},
-  year   = {2026},
-  note   = {arXiv preprint},
+  title         = {{StreamIndex}: Memory-Bounded Compressed Sparse Attention via Streaming Top-k},
+  author        = {Jaber, Jaber and Jaber, Osama},
+  year          = {2026},
+  eprint        = {2605.02568},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2605.02568},
 }
 ```
 
@@ -175,3 +179,7 @@ MIT. See [`LICENSE`](LICENSE).
 StreamIndex builds on the V3.2-Exp / V4 reference modelling code released
 by DeepSeek-AI, the TileLang `sparse_mla_fwd_pipelined` attention kernel,
 the Triton compiler, and the FlashAttention line of work.
+
+---
+
+<p align="center"><sub>by <a href="https://www.rightnowai.co/">RightNow Lab</a></sub></p>
