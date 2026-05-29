@@ -77,87 +77,88 @@ def chunked_indexer_topk(
     ``(top_k_indices: [B, S, top_k] int64, top_k_scores: [B, S, top_k] FP32)``.
     """
     assert q.is_cuda and k_idx.is_cuda and weights.is_cuda
+    assert q.dim() == 4 and k_idx.dim() == 3 and weights.dim() == 3
     B, S, H_I, D_I = q.shape
-    T = k_idx.shape[1]
-    assert k_idx.shape == (B, T, D_I)
+    B2, T, D_I2 = k_idx.shape
+    assert B2 == B and D_I2 == D_I, f"q/k shape mismatch: q={q.shape}, k={k_idx.shape}"
     assert weights.shape == (B, S, H_I)
+    if top_k <= 0:
+        raise ValueError(f"top_k must be positive, got {top_k}")
+    if chunk_s <= 0 or chunk_t <= 0:
+        raise ValueError(f"chunk_s and chunk_t must be positive, got {chunk_s=} {chunk_t=}")
     if causal_mask is not None:
         assert causal_mask.shape == (B, S, T)
-        assert causal_ratio is None, "specify either causal_mask or causal_ratio, not both"
+        assert causal_mask.device == q.device
+        assert causal_mask.dtype == torch.bool
+    if causal_ratio is not None:
+        assert causal_ratio > 0
+    assert causal_mask is None or causal_ratio is None, "specify either causal_mask or causal_ratio, not both"
 
-        k_eff = min(top_k, T)
-        out_idx = torch.empty((B, S, top_k), dtype=torch.int64, device=q.device)
-        out_scores = torch.empty((B, S, top_k), dtype=torch.float32, device=q.device)
+    out_idx = torch.empty((B, S, top_k), dtype=torch.int64, device=q.device)
+    out_scores = torch.empty((B, S, top_k), dtype=torch.float32, device=q.device)
 
-        for s_start in range(0, S, chunk_s):
-            s_end = min(s_start + chunk_s, S)
-            q_s = q[:, s_start:s_end].contiguous()
-            w_s = weights[:, s_start:s_end].contiguous()
-            chunk_S = s_end - s_start
+    for s_start in range(0, S, chunk_s):
+        s_end = min(s_start + chunk_s, S)
+        q_s = q[:, s_start:s_end].contiguous()
+        w_s = weights[:, s_start:s_end].contiguous()
+        chunk_S = s_end - s_start
 
-            # Running top-k state for this S chunk.
-            run_v = torch.full(
-                (B, chunk_S, top_k),
-                float("-inf"),
-                dtype=torch.float32,
-                device=q.device,
-            )
-            run_i = torch.full(
-                (B, chunk_S, top_k),
-                -1,
-                dtype=torch.int64,
-                device=q.device,
-            )
+        # Running top-k state for this S chunk. Initialize with sentinels so
+        # top_k may exceed either a single T chunk or the total number of legal
+        # entries; sentinel scores remain -inf and their indices are normalized
+        # to -1 after each merge.
+        run_v = torch.full(
+            (B, chunk_S, top_k),
+            float("-inf"),
+            dtype=torch.float32,
+            device=q.device,
+        )
+        run_i = torch.full(
+            (B, chunk_S, top_k),
+            -1,
+            dtype=torch.int64,
+            device=q.device,
+        )
 
-            for t_start in range(0, T, chunk_t):
-                t_end = min(t_start + chunk_t, T)
-                k_t = k_idx[:, t_start:t_end].contiguous()
-                chunk_T = t_end - t_start
+        for t_start in range(0, T, chunk_t):
+            t_end = min(t_start + chunk_t, T)
+            k_t = k_idx[:, t_start:t_end].contiguous()
+            chunk_T = t_end - t_start
 
-                # Per-chunk score matrix [B, chunk_S, chunk_T] FP32 — small.
-                scores_ct = indexer_score(q_s, k_t, w_s)
+            # Per-chunk score matrix [B, chunk_S, chunk_T] FP32 — small.
+            scores_ct = indexer_score(q_s, k_t, w_s)
 
-                if causal_mask is not None:
-                    mask_ct = causal_mask[:, s_start:s_end, t_start:t_end]
-                    scores_ct = scores_ct.masked_fill(~mask_ct, float("-inf"))
-                elif causal_ratio is not None:
-                    # Compute the V4 indexer causal mask on-the-fly per (s, t)
-                    # chunk: legal iff t < (s+1) // ratio. Mask shape is
-                    # [chunk_S, chunk_T], independent of total S, T.
-                    s_idx = torch.arange(
-                        s_start,
-                        s_end,
-                        device=q.device,
-                    ).unsqueeze(1)  # [chunk_S, 1]
-                    t_idx = torch.arange(
-                        t_start,
-                        t_end,
-                        device=q.device,
-                    ).unsqueeze(0)  # [1, chunk_T]
-                    legal_chunk = t_idx < (s_idx + 1) // causal_ratio  # [chunk_S, chunk_T]
-                    scores_ct = scores_ct.masked_fill(
-                        ~legal_chunk.unsqueeze(0),
-                        float("-inf"),
-                    )
+            if causal_mask is not None:
+                mask_ct = causal_mask[:, s_start:s_end, t_start:t_end]
+                scores_ct = scores_ct.masked_fill(~mask_ct, float("-inf"))
+            elif causal_ratio is not None:
+                # Compute the V4 indexer causal mask on-the-fly per (s, t)
+                # chunk: legal iff t < (s+1) // ratio. Mask shape is
+                # [chunk_S, chunk_T], independent of total S, T.
+                s_idx = torch.arange(s_start, s_end, device=q.device).unsqueeze(1)
+                t_idx = torch.arange(t_start, t_end, device=q.device).unsqueeze(0)
+                legal_chunk = t_idx < (s_idx + 1) // causal_ratio
+                scores_ct = scores_ct.masked_fill(~legal_chunk.unsqueeze(0), float("-inf"))
 
-                    # Per-chunk top-k.
-                    k_chunk = min(top_k, chunk_T)
-                    chunk_v, chunk_i = scores_ct.topk(k_chunk, dim=-1)
-                    chunk_i = chunk_i + t_start  # offset to global compressed-key index
+            # Per-chunk top-k. This runs for all modes: no mask, materialized
+            # causal_mask, and on-the-fly causal_ratio.
+            k_chunk = min(top_k, chunk_T)
+            chunk_v, chunk_i = scores_ct.topk(k_chunk, dim=-1)
+            chunk_i = chunk_i + t_start  # offset to global compressed-key index
 
-                    # Merge with running top-k.
-                    combined_v = torch.cat([run_v, chunk_v], dim=-1)
-                    combined_i = torch.cat([run_i, chunk_i.to(torch.int64)], dim=-1)
-                    run_v, perm = combined_v.topk(top_k, dim=-1)
-                    run_i = combined_i.gather(-1, perm)
+            # Merge with running top-k.
+            combined_v = torch.cat([run_v, chunk_v], dim=-1)
+            combined_i = torch.cat([run_i, chunk_i.to(torch.int64)], dim=-1)
+            run_v, perm = combined_v.topk(top_k, dim=-1)
+            run_i = combined_i.gather(-1, perm)
 
-                    # Mask out -inf entries (no legal entries) by setting their idx to -1.
-                    run_i = torch.where(torch.isinf(run_v), torch.full_like(run_i, -1), run_i)
+            # Mask out -inf entries (no legal entries) by setting their idx to -1.
+            run_i = torch.where(torch.isinf(run_v), torch.full_like(run_i, -1), run_i)
 
-                    out_idx[:, s_start:s_end] = run_i
-                    out_scores[:, s_start:s_end] = run_v
+        out_idx[:, s_start:s_end] = run_i
+        out_scores[:, s_start:s_end] = run_v
 
-                    return out_idx, out_scores
+    return out_idx, out_scores
 
 
 __all__ = ["chunked_indexer_topk"]
