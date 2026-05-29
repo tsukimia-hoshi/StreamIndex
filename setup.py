@@ -7,6 +7,7 @@ when CUDA is not present, so the package is still installable for CI / docs.
 The Triton kernels in flash_sparse/triton/ are JIT-compiled by Triton at
 import time and do not require a build step here.
 """
+
 from __future__ import annotations
 
 import os
@@ -21,6 +22,7 @@ _CUDA_DIR = _ROOT / "flash_sparse" / "cuda"
 def _cuda_available() -> bool:
     try:
         import torch
+
         return bool(torch.cuda.is_available()) and bool(torch.version.cuda)
     except Exception:
         return False
@@ -47,8 +49,8 @@ def _build_ext_modules():
                     "-std=c++17",
                     "--use_fast_math",
                     "--threads=4",
-                    "-gencode=arch=compute_90a,code=sm_90a",   # H100/H200 (Hopper)
-                    "-gencode=arch=compute_100a,code=sm_100a", # B200 (Blackwell)
+                    "-gencode=arch=compute_90a,code=sm_90a",  # H100/H200 (Hopper)
+                    "-gencode=arch=compute_100a,code=sm_100a",  # B200 (Blackwell)
                 ],
             },
         )
